@@ -10,6 +10,7 @@
 @interface QrReaderViewController()<AVCaptureMetadataOutputObjectsDelegate>
 @property (nonatomic, strong) AVCaptureSession *captureSession;
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer *videoPreviewLayer;
+
 @end
 
 @implementation QrReaderViewController{
@@ -22,6 +23,7 @@
     BOOL isOpenFlash;
     BOOL _isReading;
     AVCaptureDevice *captureDevice;
+    NSArray<AVMetadataObjectType> *_metadataObjectTypes;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -30,6 +32,22 @@
               binaryRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar
 {
     if ([super init]) {
+        _metadataObjectTypes = @[
+//            AVMetadataObjectTypeEAN13Code,
+//            AVMetadataObjectTypeQRCode,
+//            AVMetadataObjectTypeEAN8Code,
+            AVMetadataObjectTypeCode128Code,
+            AVMetadataObjectTypeEAN13Code,
+            AVMetadataObjectTypeEAN8Code,
+            AVMetadataObjectTypeUPCECode,
+            AVMetadataObjectTypeCode39Code,
+            AVMetadataObjectTypeCode39Mod43Code,
+            AVMetadataObjectTypeCode93Code,
+            AVMetadataObjectTypeCode128Code,
+            AVMetadataObjectTypePDF417Code,
+            AVMetadataObjectTypeQRCode,
+        ];
+        
         _registrar = registrar;
         _viewId = viewId;
         NSString *channelName = [NSString stringWithFormat:@"me.hetian.flutter_qr_reader.reader_view_%lld", viewId];
@@ -42,13 +60,49 @@
         height = args[@"height"];
         NSLog(@"%@,%@", width, height);
         _qrcodeview= [[UIView alloc] initWithFrame:CGRectMake(0, 0, width.floatValue, height.floatValue) ];
-        _qrcodeview.opaque = NO;
+//        _qrcodeview.opaque = NO;
         _qrcodeview.backgroundColor = [UIColor blackColor];
         isOpenFlash = NO;
         _isReading = NO;
+        
+        // 添加缩放手势
+        _qrcodeview.userInteractionEnabled = YES;
+        UIPinchGestureRecognizer *pinchGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinch:)];
+        [_qrcodeview addGestureRecognizer:pinchGesture];
+        
     }
     return self;
 }
+
+- (void)pinch:(UIPinchGestureRecognizer *)gesture {
+    NSLog(@"%@", gesture);
+    if (captureDevice != NULL) {
+        AVCaptureDevice *device = captureDevice;
+
+        // 设定有效缩放范围，防止超出范围而崩溃
+        CGFloat minZoomFactor = 1.0;
+        CGFloat maxZoomFactor = device.activeFormat.videoMaxZoomFactor;
+        if (@available(iOS 11.0, *)) {
+            minZoomFactor = device.minAvailableVideoZoomFactor;
+            maxZoomFactor = device.maxAvailableVideoZoomFactor;
+        }
+
+        static CGFloat lastZoomFactor = 1.0;
+        if (gesture.state == UIGestureRecognizerStateBegan) {
+            // 记录上次缩放的比例，本次缩放在上次的基础上叠加
+            lastZoomFactor = device.videoZoomFactor;// lastZoomFactor为外部变量
+        }
+        else if (gesture.state == UIGestureRecognizerStateChanged) {
+            CGFloat zoomFactor = lastZoomFactor * gesture.scale;
+            zoomFactor = fmaxf(fminf(zoomFactor, maxZoomFactor), minZoomFactor);
+            [device lockForConfiguration:nil];// 修改device属性之前须lock
+            device.videoZoomFactor = zoomFactor;// 修改device的视频缩放比例
+            [device unlockForConfiguration];// 修改device属性之后unlock
+        }
+    }
+}
+
+
 
 - (void)onMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result
 {
@@ -71,18 +125,22 @@
     NSError *error;
     _captureSession = [[AVCaptureSession alloc] init];
     captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    
     AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
     if (!input) {
         NSLog(@"%@", [error localizedDescription]);
         return NO;
     }
     [_captureSession addInput:input];
+    
+    
     AVCaptureMetadataOutput *captureMetadataOutput = [[AVCaptureMetadataOutput alloc] init];
+    [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatch_queue_create("myQueue", NULL)];
     [_captureSession addOutput:captureMetadataOutput];
-    dispatch_queue_t dispatchQueue;
-    dispatchQueue = dispatch_queue_create("myQueue", NULL);
-    [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatchQueue];
-    [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
+//    [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
+    [captureMetadataOutput setMetadataObjectTypes:_metadataObjectTypes];
+    
+    
     _videoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:_captureSession];
     [_videoPreviewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
     [_videoPreviewLayer setFrame:_qrcodeview.layer.bounds];
@@ -93,9 +151,11 @@
 
 
 -(void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection{
+    NSLog(@"%@",metadataObjects);
     if (metadataObjects != nil && [metadataObjects count] > 0) {
         AVMetadataMachineReadableCodeObject *metadataObj = [metadataObjects objectAtIndex:0];
-        if ([[metadataObj type] isEqualToString:AVMetadataObjectTypeQRCode]) {
+//        if ([[metadataObj type] isEqualToString:AVMetadataObjectTypeQRCode]) {
+        if ([_metadataObjectTypes containsObject:[metadataObj type]]) {
             NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
             [dic setObject:[metadataObj stringValue] forKey:@"text"];
             [_channel invokeMethod:@"onQRCodeRead" arguments:dic];

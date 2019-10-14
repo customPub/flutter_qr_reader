@@ -15,7 +15,7 @@ QR code (scan code &#x2F; picture) recognition （AndroidView&#x2F;UiKitView）
   s.source_files = 'Classes/**/*'
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
-
+  s.dependency 'LBXScan/LBXZBar'
   s.ios.deployment_target = '8.0'
 end
 

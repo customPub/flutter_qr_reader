@@ -23,6 +23,7 @@ import android.hardware.Camera;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -38,11 +39,16 @@ import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.common.GlobalHistogramBinarizer;
+import com.google.zxing.BarcodeFormat;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.Map;
-
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
 import com.google.zxing.client.android.camera.CameraManager;
 
 import static android.hardware.Camera.getCameraInfo;
@@ -64,8 +70,8 @@ public class QRCodeReaderView extends SurfaceView
     private OnQRCodeReadListener mOnQRCodeReadListener;
 
     private static final String TAG = QRCodeReaderView.class.getName();
-
-    private QRCodeReader mQRCodeReader;
+//    private QRCodeReader mQRCodeReader;
+    private MultiFormatReader mMultiFormatReader;
     private int mPreviewWidth;
     private int mPreviewHeight;
     private CameraManager mCameraManager;
@@ -229,7 +235,8 @@ public class QRCodeReaderView extends SurfaceView
         }
 
         try {
-            mQRCodeReader = new QRCodeReader();
+//            mQRCodeReader = new QRCodeReader();
+            mMultiFormatReader = new MultiFormatReader();
             mCameraManager.startPreview();
         } catch (Exception e) {
             SimpleLog.e(TAG, "Exception: " + e.getMessage());
@@ -362,26 +369,72 @@ public class QRCodeReaderView extends SurfaceView
                 return null;
             }
 
-            final PlanarYUVLuminanceSource source =
-                    view.mCameraManager.buildLuminanceSource(params[0], view.mPreviewWidth,
-                            view.mPreviewHeight);
-
-            final HybridBinarizer hybBin = new HybridBinarizer(source);
-            final BinaryBitmap bitmap = new BinaryBitmap(hybBin);
-
+//            final PlanarYUVLuminanceSource source =
+//                    view.mCameraManager.buildLuminanceSource(params[0], view.mPreviewWidth,
+//                            view.mPreviewHeight);
+            PlanarYUVLuminanceSource source = buildPlanarYUVLuminanceSource(params[0],view.mPreviewWidth,view.mPreviewHeight,true);
+            Log.e(TAG, "doInBackground: 开始扫描");
             try {
-                return view.mQRCodeReader.decode(bitmap, hintsRef.get());
-            } catch (ChecksumException e) {
-                SimpleLog.d(TAG, "ChecksumException", e);
-            } catch (NotFoundException e) {
-                SimpleLog.d(TAG, "No QR Code found");
-            } catch (FormatException e) {
-                SimpleLog.d(TAG, "FormatException", e);
-            } finally {
-                view.mQRCodeReader.reset();
+                final BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+//                return new MultiFormatReader().decode(bitmap, HINTS);
+                return new MultiFormatReader().decodeWithState(bitmap);
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (source != null) {
+                    try {
+                        Log.e(TAG, "doInBackground: 开始二次扫描");
+                        BinaryBitmap bitmap1 = new BinaryBitmap(new GlobalHistogramBinarizer(source));
+                        return new MultiFormatReader().decodeWithState(bitmap1);
+                    } catch (Throwable e2) {
+                        e2.printStackTrace();
+                        Log.e(TAG, "doInBackground: 开始第三次扫描");
+                        source = buildPlanarYUVLuminanceSource(params[0],view.mPreviewWidth,view.mPreviewHeight,false);
+                        if(source!=null){
+                            BinaryBitmap bitmap2 = new BinaryBitmap(new HybridBinarizer(source));
+                            try{
+                                return new MultiFormatReader().decodeWithState(bitmap2);
+                            }catch (Exception e3){
+                                e3.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }finally {
+                view.mMultiFormatReader.reset();
             }
-
             return null;
+//            try {
+//                return view.mQRCodeReader.decode(bitmap, hintsRef.get());
+//                return new MultiFormatReader().decode(bitmap, HINTS);
+//            } catch (ChecksumException e) {
+//                SimpleLog.d(TAG, "ChecksumException", e);
+//            } catch (NotFoundException e) {
+//                SimpleLog.d(TAG, "No QR Code found");
+//            } catch (FormatException e) {
+//                SimpleLog.d(TAG, "FormatException", e);
+//            } finally {
+//                view.mQRCodeReader.reset();
+//            }
+//            return null;
+        }
+
+        private PlanarYUVLuminanceSource buildPlanarYUVLuminanceSource(byte[] data, int width, int height,boolean isRotate){
+            final QRCodeReaderView view = viewRef.get();
+            PlanarYUVLuminanceSource source;
+            if(isRotate){
+                byte[] rotatedData = new byte[data.length];
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++)
+                        rotatedData[x * height + height - y - 1] = data[x + y * width];
+                }
+                int tmp = width;
+                width = height;
+                height = tmp;
+                source = view.mCameraManager.buildLuminanceSource(rotatedData, width, height);
+            }else{
+                source = view.mCameraManager.buildLuminanceSource(data, width, height);
+            }
+            return source;
         }
 
         @Override

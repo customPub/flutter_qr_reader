@@ -1,5 +1,6 @@
 #import "FlutterQrReaderPlugin.h"
 #import "QrReaderViewController.h"
+#import <LBXZBarWrapper.h>
 
 @implementation FlutterQrReaderPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
@@ -25,16 +26,27 @@
 - (void)scanQRCode:(FlutterMethodCall*)call result:(FlutterResult)result{
     NSString *path = call.arguments[@"file"];
     UIImage *image = [UIImage imageWithContentsOfFile:path];
-    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+    [LBXZBarWrapper recognizeImage:image block:^(NSArray<LBXZbarResult *> *resultArr) {
+        if (resultArr.count >= 1) {
+            LBXZbarResult *res = resultArr.firstObject;
+            result(res.strScanned);
+        }else{
+            result(NULL);
+        }
+    }];
     
-    NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage:image.CGImage]];
-    if (features.count > 0) {
-        CIQRCodeFeature *feature = [features objectAtIndex:0];
-        NSString *qrData = feature.messageString;
-        result(qrData);
-    } else {
-        result(NULL);
-    }
+//    NSString *path = call.arguments[@"file"];
+//    UIImage *image = [UIImage imageWithContentsOfFile:path];
+//    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+//
+//    NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage:image.CGImage]];
+//    if (features.count > 0) {
+//        CIQRCodeFeature *feature = [features objectAtIndex:0];
+//        NSString *qrData = feature.messageString;
+//        result(qrData);
+//    } else {
+//        result(NULL);
+//    }
 }
 
 @end

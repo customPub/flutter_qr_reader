@@ -36,7 +36,7 @@ class _ScanViewDemoState extends State<ScanViewDemo> {
       builder: (context) {
         return CupertinoAlertDialog(
           title: Text("扫码结果"),
-          content: Text(data),
+          content: data==null?Text("没有识别成功..."):Text(data),
           actions: <Widget>[
             CupertinoDialogAction(
               child: Text("确认"),

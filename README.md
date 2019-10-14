@@ -2,6 +2,8 @@
 
 QR code (scan code &#x2F; picture) recognition （AndroidView&#x2F;UiKitView）
 
+支持条形码以及二维码
+
 ## DEMO
 
 ![demo](https://github.com/hetian9288/flutter_qr_reader/blob/master/Screenshot_20190608-153849.jpg?raw=true)
