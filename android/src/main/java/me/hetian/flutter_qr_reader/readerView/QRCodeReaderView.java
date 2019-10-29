@@ -79,6 +79,34 @@ public class QRCodeReaderView extends SurfaceView
     private DecodeFrameTask decodeFrameTask;
     private Map<DecodeHintType, Object> decodeHints;
 
+    public static final Map<DecodeHintType, Object> HINTS = new EnumMap<>(DecodeHintType.class);
+    static {
+        List<BarcodeFormat> allFormats = new ArrayList<>();
+        // allFormats.add(BarcodeFormat.AZTEC);
+        // allFormats.add(BarcodeFormat.CODABAR);
+        // allFormats.add(BarcodeFormat.CODE_39);
+        // allFormats.add(BarcodeFormat.CODE_93);
+        // allFormats.add(BarcodeFormat.CODE_128);
+        // allFormats.add(BarcodeFormat.DATA_MATRIX);
+        // allFormats.add(BarcodeFormat.EAN_8);
+        allFormats.add(BarcodeFormat.EAN_13);
+        // allFormats.add(BarcodeFormat.ITF);
+        // allFormats.add(BarcodeFormat.MAXICODE);
+        // allFormats.add(BarcodeFormat.PDF_417);
+        allFormats.add(BarcodeFormat.QR_CODE);
+        // allFormats.add(BarcodeFormat.RSS_14);
+        // allFormats.add(BarcodeFormat.RSS_EXPANDED);
+        // allFormats.add(BarcodeFormat.UPC_A);
+        // allFormats.add(BarcodeFormat.UPC_E);
+        // allFormats.add(BarcodeFormat.UPC_EAN_EXTENSION);
+        HINTS.put(DecodeHintType.TRY_HARDER, BarcodeFormat.QR_CODE);
+        HINTS.put(DecodeHintType.TRY_HARDER, BarcodeFormat.EAN_13);
+        // HINTS.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+        HINTS.put(DecodeHintType.POSSIBLE_FORMATS, allFormats);
+        HINTS.put(DecodeHintType.CHARACTER_SET, "utf-8");
+    }
+
+
     public QRCodeReaderView(Context context) {
         this(context, null);
     }
@@ -377,14 +405,16 @@ public class QRCodeReaderView extends SurfaceView
             try {
                 final BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 //                return new MultiFormatReader().decode(bitmap, HINTS);
-                return new MultiFormatReader().decodeWithState(bitmap);
+                // return new MultiFormatReader().decodeWithState(bitmap, HINTS);
+                return new MultiFormatReader().decode(bitmap, HINTS);
             } catch (Exception e) {
                 e.printStackTrace();
                 if (source != null) {
                     try {
                         Log.e(TAG, "doInBackground: 开始二次扫描");
                         BinaryBitmap bitmap1 = new BinaryBitmap(new GlobalHistogramBinarizer(source));
-                        return new MultiFormatReader().decodeWithState(bitmap1);
+                        // return new MultiFormatReader().decodeWithState(bitmap1, HINTS);
+                        return new MultiFormatReader().decode(bitmap1, HINTS);
                     } catch (Throwable e2) {
                         e2.printStackTrace();
                         Log.e(TAG, "doInBackground: 开始第三次扫描");
@@ -392,7 +422,8 @@ public class QRCodeReaderView extends SurfaceView
                         if(source!=null){
                             BinaryBitmap bitmap2 = new BinaryBitmap(new HybridBinarizer(source));
                             try{
-                                return new MultiFormatReader().decodeWithState(bitmap2);
+                                // return new MultiFormatReader().decodeWithState(bitmap2, HINTS);
+                                return new MultiFormatReader().decode(bitmap2, HINTS);
                             }catch (Exception e3){
                                 e3.printStackTrace();
                             }

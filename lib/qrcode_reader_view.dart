@@ -156,7 +156,7 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
             if (widget.headerWidget != null) widget.headerWidget,
             Positioned(
               left: (constraints.maxWidth - qrScanSize) / 2,
-              top: (constraints.maxHeight - qrScanSize) * 0.333333,
+              top: (constraints.maxHeight - qrScanSize) * 0.5,
               child: CustomPaint(
                 painter: QrScanBoxPainter(
                   boxLineColor: widget.boxLineColor,
@@ -171,20 +171,18 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
               ),
             ),
             Positioned(
-              top: (constraints.maxHeight - qrScanSize) * 0.333333 +
-                      qrScanSize +
-                      24,
+              top: (constraints.maxHeight - qrScanSize) * 0.5 - 24,
               width: constraints.maxWidth,
               child: Align(
                 alignment: Alignment.center,
                 child: DefaultTextStyle(
                   style: TextStyle(color: Colors.white),
-                  child: widget.helpWidget ?? Text("请将二维码置于方框中"),
+                  child: widget.helpWidget ?? Text("请将二维码置于方框中间"),
                 ),
               ),
             ),
             Positioned(
-              top: (constraints.maxHeight - qrScanSize) * 0.333333 +
+              top: (constraints.maxHeight - qrScanSize) * 0.5 +
                       qrScanSize -
                       12 -
                       35,

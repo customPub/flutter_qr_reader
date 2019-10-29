@@ -33,19 +33,19 @@
 {
     if ([super init]) {
         _metadataObjectTypes = @[
-//            AVMetadataObjectTypeEAN13Code,
-//            AVMetadataObjectTypeQRCode,
-//            AVMetadataObjectTypeEAN8Code,
-            AVMetadataObjectTypeCode128Code,
-            AVMetadataObjectTypeEAN13Code,
-            AVMetadataObjectTypeEAN8Code,
-            AVMetadataObjectTypeUPCECode,
-            AVMetadataObjectTypeCode39Code,
-            AVMetadataObjectTypeCode39Mod43Code,
-            AVMetadataObjectTypeCode93Code,
-            AVMetadataObjectTypeCode128Code,
-            AVMetadataObjectTypePDF417Code,
-            AVMetadataObjectTypeQRCode,
+           AVMetadataObjectTypeEAN13Code,
+           AVMetadataObjectTypeQRCode,
+        //    AVMetadataObjectTypeEAN8Code,
+        //     AVMetadataObjectTypeCode128Code,
+        //     AVMetadataObjectTypeEAN13Code,
+        //     AVMetadataObjectTypeEAN8Code,
+        //     AVMetadataObjectTypeUPCECode,
+        //     AVMetadataObjectTypeCode39Code,
+        //     AVMetadataObjectTypeCode39Mod43Code,
+        //     AVMetadataObjectTypeCode93Code,
+        //     AVMetadataObjectTypeCode128Code,
+        //     AVMetadataObjectTypePDF417Code,
+        //     AVMetadataObjectTypeQRCode,
         ];
         
         _registrar = registrar;
