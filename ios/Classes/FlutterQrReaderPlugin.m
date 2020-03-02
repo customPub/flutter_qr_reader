@@ -1,6 +1,7 @@
 #import "FlutterQrReaderPlugin.h"
 #import "QrReaderViewController.h"
 #import <LBXZBarWrapper.h>
+#import <ZXingWrapper.h>
 
 @implementation FlutterQrReaderPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
@@ -26,27 +27,24 @@
 - (void)scanQRCode:(FlutterMethodCall*)call result:(FlutterResult)result{
     NSString *path = call.arguments[@"file"];
     UIImage *image = [UIImage imageWithContentsOfFile:path];
-    [LBXZBarWrapper recognizeImage:image block:^(NSArray<LBXZbarResult *> *resultArr) {
-        if (resultArr.count >= 1) {
-            LBXZbarResult *res = resultArr.firstObject;
-            result(res.strScanned);
+    [ZXingWrapper recognizeImage:image block:^(ZXBarcodeFormat barcodeFormat, NSString *str) {
+        NSLog(@"format = %u", barcodeFormat);
+        NSLog(@"str = %@", str);
+        if (str != nil && str.length > 0) {
+            result(str);
         }else{
             result(NULL);
         }
     }];
-    
-//    NSString *path = call.arguments[@"file"];
-//    UIImage *image = [UIImage imageWithContentsOfFile:path];
-//    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-//
-//    NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage:image.CGImage]];
-//    if (features.count > 0) {
-//        CIQRCodeFeature *feature = [features objectAtIndex:0];
-//        NSString *qrData = feature.messageString;
-//        result(qrData);
-//    } else {
-//        result(NULL);
-//    }
+//    [LBXZBarWrapper recognizeImage:image block:^(NSArray<LBXZbarResult *> *resultArr) {
+//        NSLog(@"resultArr = %@", resultArr);
+//        if (resultArr.count >= 1) {
+//            LBXZbarResult *res = resultArr.firstObject;
+//            result(res.strScanned);
+//        }else{
+//            result(NULL);
+//        }
+//    }];
 }
 
 @end

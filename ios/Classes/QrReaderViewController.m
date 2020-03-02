@@ -6,10 +6,19 @@
 //
 
 #import "QrReaderViewController.h"
+#import "ZXingWrapper.h"
+#import <LBXScanView.h>
+
+#define screen_width [UIScreen mainScreen].bounds.size.width
+#define screen_height [UIScreen mainScreen].bounds.size.height
 
 @interface QrReaderViewController()<AVCaptureMetadataOutputObjectsDelegate>
 @property (nonatomic, strong) AVCaptureSession *captureSession;
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer *videoPreviewLayer;
+
+@property (nonatomic, strong) ZXingWrapper *zxingObj;
+@property (nonatomic,strong) LBXScanView* qRScanView;
+@property (nonatomic, strong) LBXScanViewStyle *style;
 
 @end
 
@@ -35,19 +44,7 @@
         _metadataObjectTypes = @[
            AVMetadataObjectTypeEAN13Code,
            AVMetadataObjectTypeQRCode,
-        //    AVMetadataObjectTypeEAN8Code,
-        //     AVMetadataObjectTypeCode128Code,
-        //     AVMetadataObjectTypeEAN13Code,
-        //     AVMetadataObjectTypeEAN8Code,
-        //     AVMetadataObjectTypeUPCECode,
-        //     AVMetadataObjectTypeCode39Code,
-        //     AVMetadataObjectTypeCode39Mod43Code,
-        //     AVMetadataObjectTypeCode93Code,
-        //     AVMetadataObjectTypeCode128Code,
-        //     AVMetadataObjectTypePDF417Code,
-        //     AVMetadataObjectTypeQRCode,
         ];
-        
         _registrar = registrar;
         _viewId = viewId;
         NSString *channelName = [NSString stringWithFormat:@"me.hetian.flutter_qr_reader.reader_view_%lld", viewId];
@@ -59,47 +56,111 @@
         width = args[@"width"];
         height = args[@"height"];
         NSLog(@"%@,%@", width, height);
-        _qrcodeview= [[UIView alloc] initWithFrame:CGRectMake(0, 0, width.floatValue, height.floatValue) ];
-//        _qrcodeview.opaque = NO;
-        _qrcodeview.backgroundColor = [UIColor blackColor];
+        
+//        _qrcodeview = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width.floatValue, height.floatValue) ];
+////        _qrcodeview.opaque = NO;
+//        _qrcodeview.backgroundColor = [UIColor blackColor];
+        
         isOpenFlash = NO;
         _isReading = NO;
         
-        // 添加缩放手势
-        _qrcodeview.userInteractionEnabled = YES;
-        UIPinchGestureRecognizer *pinchGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinch:)];
-        [_qrcodeview addGestureRecognizer:pinchGesture];
-        
+        [self drawScanView];
+        [self requestCameraPemissionWithResult:^(BOOL granted) {
+            if (granted) {
+                //不延时，可能会导致界面黑屏并卡住一会
+                [self performSelector:@selector(startScan) withObject:nil afterDelay:0.3];
+            }else{
+                [weakSelf.qRScanView stopDeviceReadying];
+            }
+        }];
     }
     return self;
 }
-
-- (void)pinch:(UIPinchGestureRecognizer *)gesture {
-    NSLog(@"%@", gesture);
-    if (captureDevice != NULL) {
-        AVCaptureDevice *device = captureDevice;
-
-        // 设定有效缩放范围，防止超出范围而崩溃
-        CGFloat minZoomFactor = 1.0;
-        CGFloat maxZoomFactor = device.activeFormat.videoMaxZoomFactor;
-        if (@available(iOS 11.0, *)) {
-            minZoomFactor = device.minAvailableVideoZoomFactor;
-            maxZoomFactor = device.maxAvailableVideoZoomFactor;
-        }
-
-        static CGFloat lastZoomFactor = 1.0;
-        if (gesture.state == UIGestureRecognizerStateBegan) {
-            // 记录上次缩放的比例，本次缩放在上次的基础上叠加
-            lastZoomFactor = device.videoZoomFactor;// lastZoomFactor为外部变量
-        }
-        else if (gesture.state == UIGestureRecognizerStateChanged) {
-            CGFloat zoomFactor = lastZoomFactor * gesture.scale;
-            zoomFactor = fmaxf(fminf(zoomFactor, maxZoomFactor), minZoomFactor);
-            [device lockForConfiguration:nil];// 修改device属性之前须lock
-            device.videoZoomFactor = zoomFactor;// 修改device的视频缩放比例
-            [device unlockForConfiguration];// 修改device属性之后unlock
+- (void)requestCameraPemissionWithResult:(void(^)( BOOL granted))completion
+{
+    if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
+    {
+        AVAuthorizationStatus permission =
+        [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        
+        switch (permission) {
+            case AVAuthorizationStatusAuthorized:
+                completion(YES);
+                break;
+            case AVAuthorizationStatusDenied:
+            case AVAuthorizationStatusRestricted:
+                completion(NO);
+                break;
+            case AVAuthorizationStatusNotDetermined:
+            {
+                [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo
+                                         completionHandler:^(BOOL granted) {
+                                             
+                                             dispatch_async(dispatch_get_main_queue(), ^{
+                                                 if (granted) {
+                                                     completion(true);
+                                                 } else {
+                                                     completion(false);
+                                                 }
+                                             });
+                                             
+                                         }];
+            }
+                break;
         }
     }
+}
+
+
+//绘制扫描区域
+- (void)drawScanView
+{
+    if (!_qRScanView)
+    {
+        CGRect rect = CGRectMake(0, 0, screen_width, screen_height);
+        _style = [[LBXScanViewStyle alloc] init];
+        _style.isNeedShowRetangle = NO;
+        _style.colorRetangleLine = [UIColor clearColor];
+        _style.colorAngle = [UIColor clearColor];
+        _style.anmiationStyle = LBXScanViewAnimationStyle_None;
+        _style.xScanRetangleOffset = screen_width*0.15/2;
+        self.qRScanView = [[LBXScanView alloc]initWithFrame:rect style:_style];
+        
+//        [self.view addSubview:_qRScanView];
+    }
+//    if (!_cameraInvokeMsg) {
+////        _cameraInvokeMsg = NSLocalizedString(@"wating...", nil);
+//    }
+    [_qRScanView startDeviceReadyingWithText:@""];
+}
+//启动设备
+- (void)startScan
+{
+    CGFloat width = screen_width*0.85;
+    CGFloat height = width;
+    UIView *videoView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame))];
+    videoView.backgroundColor = [UIColor clearColor];
+    [self.view insertSubview:videoView atIndex:0];
+    if (!_zxingObj) {
+        self.zxingObj = [[ZXingWrapper alloc]initWithPreView:videoView block:^(ZXBarcodeFormat barcodeFormat, NSString *str, UIImage *scanImg) {
+            if (str != nil && str.length > 0) {
+                NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+                [dic setObject:str forKey:@"text"];
+                [self->_channel invokeMethod:@"onQRCodeRead" arguments:dic];
+                [self performSelectorOnMainThread:@selector(stopReading) withObject:nil waitUntilDone:NO];
+                self->_isReading = NO;
+            }
+        }];
+        //设置只识别框内区域
+        CGRect cropRect = [LBXScanView getZXingScanRectWithPreView:videoView style:_style];
+                            
+         [_zxingObj setScanRect:cropRect];
+//        [self.zxingObj setScanRect:CGRectMake((screen_width - width)/2, (screen_height - height)/2, width, height)];
+    }
+    [_zxingObj start];
+    [_qRScanView stopDeviceReadying];
+    [_qRScanView startScanAnimation];
+    self.view.backgroundColor = [UIColor clearColor];
 }
 
 
@@ -109,14 +170,17 @@
     if ([call.method isEqualToString:@"flashlight"]) {
         [self setFlashlight];
     }else if ([call.method isEqualToString:@"startCamera"]) {
-        [self startReading];
+//        [self startReading];
+        [_zxingObj start];
     } else if ([call.method isEqualToString:@"stopCamera"]) {
-        [self stopReading];
+//        [self stopReading];
+        [_zxingObj stop];
     }
 }
 
 - (nonnull UIView *)view {
-    return _qrcodeview;
+//    return _qrcodeview;
+    return _qRScanView;
 }
 
 - (BOOL)startReading {
@@ -135,7 +199,30 @@
     
     
     AVCaptureMetadataOutput *captureMetadataOutput = [[AVCaptureMetadataOutput alloc] init];
+    
+    
+//    CGRect intersetRect = CGRectMake(self.view.frame.origin.y/screen_height, self.view.frame.origin.x/screen_width, self.view.frame.size.height/screen_height, self.view.frame.size.width/screen_width);
+    CGRect intersetRect = CGRectMake(self.view.frame.origin.y/screen_height, self.view.frame.origin.x/screen_width, height.floatValue, width.floatValue);
+    NSLog(@"%@", NSStringFromCGRect(intersetRect));
+    //设置识别区域
+    //深坑，这个值是按比例0~1设置，而且X、Y要调换位置，width、height调换位置
+    captureMetadataOutput.rectOfInterest = intersetRect;
+    __weak typeof(self) weakSelf = self;
+    [[NSNotificationCenter defaultCenter]
+     addObserverForName:AVCaptureInputPortFormatDescriptionDidChangeNotification
+         object:nil
+         queue:[NSOperationQueue mainQueue]
+         usingBlock:^(NSNotification * _Nonnull note) {
+            if (weakSelf){
+                //调整扫描区域
+                captureMetadataOutput.rectOfInterest = intersetRect;
+            }
+    }];
+    
+    
     [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatch_queue_create("myQueue", NULL)];
+    
+    
     [_captureSession addOutput:captureMetadataOutput];
 //    [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
     [captureMetadataOutput setMetadataObjectTypes:_metadataObjectTypes];
