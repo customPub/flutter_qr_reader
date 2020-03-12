@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_qr_reader/qrcode_reader_view.dart';
@@ -30,7 +32,7 @@ class _ScanViewDemoState extends State<ScanViewDemo> {
     );
   }
 
-  Future onScan(String data) async {
+  Future onScan(String data, {File image}) async {
     await showCupertinoDialog(
       context: context,
       builder: (context) {

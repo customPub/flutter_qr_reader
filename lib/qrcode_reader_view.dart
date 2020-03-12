@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 /// Relevant privileges must be obtained before use
 class QrcodeReaderView extends StatefulWidget {
   final Widget headerWidget;
-  final Future Function(String, {File image}) onScan;
+  final Future Function(String code, {File image}) onScan;
   final Function() onEdit;
   final double scanBoxRatio;
   final Color boxLineColor;
@@ -89,7 +89,7 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
     if (isScan == true) return;
     isScan = true;
     stopScan();
-    await widget.onScan(data);
+    await widget.onScan(data, image: null);
   }
 
   void startScan() {
