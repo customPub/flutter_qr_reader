@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 class QrcodeReaderView extends StatefulWidget {
   final Widget headerWidget;
   final Future Function(String code, {File image}) onScan;
+  final Function() onSelectImage;
   final Function() onEdit;
   final double scanBoxRatio;
   final Color boxLineColor;
@@ -17,6 +18,7 @@ class QrcodeReaderView extends StatefulWidget {
   QrcodeReaderView({
     Key key,
     @required this.onScan,
+    this.onSelectImage,
     this.onEdit,
     this.headerWidget,
     this.boxLineColor = Colors.cyanAccent,
@@ -213,7 +215,7 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
                 children: <Widget>[
                   GestureDetector(
                     behavior: HitTestBehavior.translucent,
-                    onTap: _scanImage,
+                    onTap: widget.onSelectImage!=null?widget.onSelectImage:_scanImage,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[

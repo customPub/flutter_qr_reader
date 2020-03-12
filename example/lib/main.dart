@@ -42,6 +42,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Plugin example app'),
@@ -79,7 +80,7 @@ class _HomePageState extends State<HomePage> {
             ),
             FlatButton(
                 onPressed: () async {
-                  var image = await ImagePicker.pickImage(source: ImageSource.gallery);
+                  var image = await ImagePicker.pickImage(source: ImageSource.gallery, maxWidth:width*0.8, maxHeight: width*0.8, imageQuality: 50) ;
                   if (image == null) return;
                   final rest = await FlutterQrReader.imgScan(image);
                   setState(() {
