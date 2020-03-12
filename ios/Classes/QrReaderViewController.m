@@ -12,9 +12,7 @@
 #define screen_width [UIScreen mainScreen].bounds.size.width
 #define screen_height [UIScreen mainScreen].bounds.size.height
 
-@interface QrReaderViewController()<AVCaptureMetadataOutputObjectsDelegate>
-@property (nonatomic, strong) AVCaptureSession *captureSession;
-@property (nonatomic, strong) AVCaptureVideoPreviewLayer *videoPreviewLayer;
+@interface QrReaderViewController()<AVCaptureMetadataOutputObjectsDelegate>;
 
 @property (nonatomic, strong) ZXingWrapper *zxingObj;
 @property (nonatomic,strong) LBXScanView* qRScanView;
@@ -56,10 +54,6 @@
         width = args[@"width"];
         height = args[@"height"];
         NSLog(@"%@,%@", width, height);
-        
-//        _qrcodeview = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width.floatValue, height.floatValue) ];
-////        _qrcodeview.opaque = NO;
-//        _qrcodeview.backgroundColor = [UIColor blackColor];
         
         isOpenFlash = NO;
         _isReading = NO;
@@ -125,8 +119,6 @@
         _style.anmiationStyle = LBXScanViewAnimationStyle_None;
         _style.xScanRetangleOffset = screen_width*0.15/2;
         self.qRScanView = [[LBXScanView alloc]initWithFrame:rect style:_style];
-        
-//        [self.view addSubview:_qRScanView];
     }
 //    if (!_cameraInvokeMsg) {
 ////        _cameraInvokeMsg = NSLocalizedString(@"wating...", nil);
@@ -136,25 +128,39 @@
 //启动设备
 - (void)startScan
 {
-    CGFloat width = screen_width*0.85;
-    CGFloat height = width;
+//    CGFloat width = screen_width*0.85;
+//    CGFloat height = width;
+    __weak typeof(self) weakSelf = self;
     UIView *videoView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame))];
     videoView.backgroundColor = [UIColor clearColor];
     [self.view insertSubview:videoView atIndex:0];
     if (!_zxingObj) {
         self.zxingObj = [[ZXingWrapper alloc]initWithPreView:videoView block:^(ZXBarcodeFormat barcodeFormat, NSString *str, UIImage *scanImg) {
-            if (str != nil && str.length > 0) {
-                NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
-                [dic setObject:str forKey:@"text"];
-                [self->_channel invokeMethod:@"onQRCodeRead" arguments:dic];
-                [self performSelectorOnMainThread:@selector(stopReading) withObject:nil waitUntilDone:NO];
-                self->_isReading = NO;
+            if (str == nil) {
+                str = @"";
             }
+//            if (barcodeFormat != kBarcodeFormatQRCode && barcodeFormat != kBarcodeFormatEan13) {
+//                str = @"";
+//            }
+            NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+            [dic setObject:str forKey:@"text"];
+            [self->_channel invokeMethod:@"onQRCodeRead" arguments:dic];
+            [self performSelectorOnMainThread:@selector(stopReading) withObject:nil waitUntilDone:NO];
+            self->_isReading = NO;
+//            if (barcodeFormat == kBarcodeFormatQRCode || barcodeFormat == kBarcodeFormatEan13) {
+//                if (str != nil && str.length > 0) {
+//                    NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+//                    [dic setObject:str forKey:@"text"];
+//                    [self->_channel invokeMethod:@"onQRCodeRead" arguments:dic];
+//                    [self performSelectorOnMainThread:@selector(stopReading) withObject:nil waitUntilDone:NO];
+//                    self->_isReading = NO;
+//                    return;
+//                }
+//            }
         }];
         //设置只识别框内区域
         CGRect cropRect = [LBXScanView getZXingScanRectWithPreView:videoView style:_style];
-                            
-         [_zxingObj setScanRect:cropRect];
+        [_zxingObj setScanRect:cropRect];
 //        [self.zxingObj setScanRect:CGRectMake((screen_width - width)/2, (screen_height - height)/2, width, height)];
     }
     [_zxingObj start];
@@ -170,109 +176,41 @@
     if ([call.method isEqualToString:@"flashlight"]) {
         [self setFlashlight];
     }else if ([call.method isEqualToString:@"startCamera"]) {
-//        [self startReading];
         [_zxingObj start];
     } else if ([call.method isEqualToString:@"stopCamera"]) {
-//        [self stopReading];
-        [_zxingObj stop];
+        [self stopReading];
+//        [_zxingObj stop];
     }
 }
 
-- (nonnull UIView *)view {
-//    return _qrcodeview;
+- (nonnull UIView *)view
+{
     return _qRScanView;
 }
 
-- (BOOL)startReading {
-    if (_isReading) return NO;
-    _isReading = YES;
-    NSError *error;
-    _captureSession = [[AVCaptureSession alloc] init];
-    captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    
-    AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
-    if (!input) {
-        NSLog(@"%@", [error localizedDescription]);
-        return NO;
-    }
-    [_captureSession addInput:input];
-    
-    
-    AVCaptureMetadataOutput *captureMetadataOutput = [[AVCaptureMetadataOutput alloc] init];
-    
-    
-//    CGRect intersetRect = CGRectMake(self.view.frame.origin.y/screen_height, self.view.frame.origin.x/screen_width, self.view.frame.size.height/screen_height, self.view.frame.size.width/screen_width);
-    CGRect intersetRect = CGRectMake(self.view.frame.origin.y/screen_height, self.view.frame.origin.x/screen_width, height.floatValue, width.floatValue);
-    NSLog(@"%@", NSStringFromCGRect(intersetRect));
-    //设置识别区域
-    //深坑，这个值是按比例0~1设置，而且X、Y要调换位置，width、height调换位置
-    captureMetadataOutput.rectOfInterest = intersetRect;
-    __weak typeof(self) weakSelf = self;
-    [[NSNotificationCenter defaultCenter]
-     addObserverForName:AVCaptureInputPortFormatDescriptionDidChangeNotification
-         object:nil
-         queue:[NSOperationQueue mainQueue]
-         usingBlock:^(NSNotification * _Nonnull note) {
-            if (weakSelf){
-                //调整扫描区域
-                captureMetadataOutput.rectOfInterest = intersetRect;
-            }
-    }];
-    
-    
-    [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatch_queue_create("myQueue", NULL)];
-    
-    
-    [_captureSession addOutput:captureMetadataOutput];
-//    [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
-    [captureMetadataOutput setMetadataObjectTypes:_metadataObjectTypes];
-    
-    
-    _videoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:_captureSession];
-    [_videoPreviewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
-    [_videoPreviewLayer setFrame:_qrcodeview.layer.bounds];
-    [_qrcodeview.layer addSublayer:_videoPreviewLayer];
-    [_captureSession startRunning];
-    return YES;
-}
-
-
--(void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection{
-    NSLog(@"%@",metadataObjects);
-    if (metadataObjects != nil && [metadataObjects count] > 0) {
-        AVMetadataMachineReadableCodeObject *metadataObj = [metadataObjects objectAtIndex:0];
-//        if ([[metadataObj type] isEqualToString:AVMetadataObjectTypeQRCode]) {
-        if ([_metadataObjectTypes containsObject:[metadataObj type]]) {
-            NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
-            [dic setObject:[metadataObj stringValue] forKey:@"text"];
-            [_channel invokeMethod:@"onQRCodeRead" arguments:dic];
-            [self performSelectorOnMainThread:@selector(stopReading) withObject:nil waitUntilDone:NO];
-            _isReading = NO;
-        }
-    }
-}
 
 
 -(void)stopReading{
-    [_captureSession stopRunning];
-    _captureSession = nil;
-    [_videoPreviewLayer removeFromSuperlayer];
+    [_zxingObj stop];
     _isReading = NO;
 }
 
 // 手电筒开关
 - (void) setFlashlight
 {
-    [captureDevice lockForConfiguration:nil];
-    if (isOpenFlash == NO) {
-        [captureDevice setTorchMode:AVCaptureTorchModeOn];
-        isOpenFlash = YES;
-    } else {
-        [captureDevice setTorchMode:AVCaptureTorchModeOff];
-        isOpenFlash = NO;
-    }
+    [_zxingObj openOrCloseTorch];
+    isOpenFlash = !isOpenFlash;
     
-    [captureDevice unlockForConfiguration];
+//    [captureDevice lockForConfiguration:nil];
+//    if (isOpenFlash == NO) {
+//        [captureDevice setTorchMode:AVCaptureTorchModeOn];
+//        isOpenFlash = YES;
+//    } else {
+//        [captureDevice setTorchMode:AVCaptureTorchModeOff];
+//        isOpenFlash = NO;
+//    }
+//
+//    [captureDevice unlockForConfiguration];
 }
 
 @end

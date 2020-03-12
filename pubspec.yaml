@@ -38,6 +38,7 @@ flutter:
     - assets/tool_qrcode.png
     - assets/tool_flashlight_close.png
     - assets/tool_flashlight_open.png
+    - assets/tool_img_input.png
   #
   # For details regarding assets in packages, see
   # https://flutter.dev/assets-and-images/#from-packages

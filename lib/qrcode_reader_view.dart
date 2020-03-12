@@ -9,17 +9,19 @@ import 'package:image_picker/image_picker.dart';
 class QrcodeReaderView extends StatefulWidget {
   final Widget headerWidget;
   final Future Function(String) onScan;
+  final Function() onEdit;
   final double scanBoxRatio;
   final Color boxLineColor;
   final Widget helpWidget;
   QrcodeReaderView({
-                     Key key,
-                     @required this.onScan,
-                     this.headerWidget,
-                     this.boxLineColor = Colors.cyanAccent,
-                     this.helpWidget,
-                     this.scanBoxRatio = 0.85,
-                   }) : super(key: key);
+    Key key,
+    @required this.onScan,
+    this.onEdit,
+    this.headerWidget,
+    this.boxLineColor = Colors.cyanAccent,
+    this.helpWidget,
+    this.scanBoxRatio = 0.85,
+  }) : super(key: key);
 
   @override
   QrcodeReaderViewState createState() => new QrcodeReaderViewState();
@@ -191,16 +193,19 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
                 alignment: Alignment.center,
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
-                  onTap: setFlashlight,
+                  onTap: (){
+                    setFlashlight();
+                  },
                   child: openFlashlight ? flashOpen : flashClose,
                 ),
               ),
             ),
             Positioned(
               width: constraints.maxWidth,
-              bottom: constraints.maxHeight == mediaQuery.size.height
-                      ? 12 + mediaQuery.padding.top
-                      : 12,
+              top: (constraints.maxHeight + qrScanSize) * 0.5 + 44,
+              // bottom: constraints.maxHeight == mediaQuery.size.height
+              //         ? 12 + mediaQuery.padding.top
+              //         : 12,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -208,36 +213,68 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
                   GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: _scanImage,
-                    child: Container(
-                      width: 45,
-                      height: 45,
-                      alignment: Alignment.center,
-                      child: Image.asset(
-                        "assets/tool_img.png",
-                        package: "flutter_qr_reader",
-                        width: 25,
-                        height: 25,
-                        color: Colors.white54,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Container(
+                          width: 45,
+                          height: 45,
+                          alignment: Alignment.center,
+                          child: Image.asset(
+                            "assets/tool_img.png",
+                            package: "flutter_qr_reader",
+                            width: 25,
+                            height: 25,
+                            color: Colors.white54,
+                          ),
+                        ),
+                        Text("图片", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15),)
+                      ],
                     ),
                   ),
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(40)),
-                      border: Border.all(color: Colors.white30, width: 12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Image.asset(
-                      "assets/tool_qrcode.png",
-                      package: "flutter_qr_reader",
-                      width: 35,
-                      height: 35,
-                      color: Colors.white54,
+                  GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: (){
+                      if (widget.onEdit != null) {
+                        widget.onEdit();
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Container(
+                          width: 45,
+                          height: 45,
+                          alignment: Alignment.center,
+                          child: Image.asset(
+                            "assets/tool_img_input.png",
+                            package: "flutter_qr_reader",
+                            width: 25,
+                            height: 25,
+                            color: Colors.white54,
+                          ),
+                        ),
+                        Text("手动输入", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15),)
+                      ],
                     ),
                   ),
-                  SizedBox(width: 45, height: 45),
+                  // Container(
+                  //   width: 80,
+                  //   height: 80,
+                  //   decoration: BoxDecoration(
+                  //     borderRadius: BorderRadius.all(Radius.circular(40)),
+                  //     border: Border.all(color: Colors.white30, width: 12),
+                  //   ),
+                  //   alignment: Alignment.center,
+                  //   child: Image.asset(
+                  //     "assets/tool_qrcode.png",
+                  //     package: "flutter_qr_reader",
+                  //     width: 35,
+                  //     height: 35,
+                  //     color: Colors.white54,
+                  //   ),
+                  // ),
+                  // SizedBox(width: 45, height: 45),
                 ],
               ),
             )
@@ -249,6 +286,7 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
 
   @override
   void dispose() {
+    stopScan();
     _clearAnimation();
     super.dispose();
   }
