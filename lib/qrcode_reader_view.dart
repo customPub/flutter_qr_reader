@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'flutter_qr_reader.dart';
@@ -8,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 /// Relevant privileges must be obtained before use
 class QrcodeReaderView extends StatefulWidget {
   final Widget headerWidget;
-  final Future Function(String) onScan;
+  final Future Function(String, {File image}) onScan;
   final Function() onEdit;
   final double scanBoxRatio;
   final Color boxLineColor;
@@ -116,7 +117,7 @@ class QrcodeReaderViewState extends State<QrcodeReaderView>
       return;
     }
     final rest = await FlutterQrReader.imgScan(image);
-    await widget.onScan(rest);
+    await widget.onScan(rest, image: image);
     startScan();
   }
 
