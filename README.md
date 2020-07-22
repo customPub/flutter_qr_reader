@@ -1,8 +1,8 @@
 # flutter_qr_reader
 
-QR code (scan code &#x2F; picture) recognition （AndroidView&#x2F;UiKitView）
+<!-- QR code (scan code &#x2F; picture) recognition （AndroidView&#x2F;UiKitView）
 
-支持条形码以及二维码
+支持条形码以及二维码 -->
 
 ## DEMO
 
