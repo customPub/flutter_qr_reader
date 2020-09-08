@@ -1,7 +1,7 @@
 #import "FlutterQrReaderPlugin.h"
 #import "QrReaderViewController.h"
-#import <LBXZBarWrapper.h>
-#import <ZXingWrapper.h>
+#import "LBXZBarWrapper.h"
+#import "ZXingWrapper.h"
 
 @implementation FlutterQrReaderPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
